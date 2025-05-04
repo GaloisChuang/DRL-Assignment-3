@@ -98,22 +98,16 @@ class QNet(nn.Module):
             if isinstance(m, NoisyLinear):
                 m.reset_noise()
 
+# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cpu")
 
-# Device setup
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-# 1) Instantiate and load only the Q-network
 q_net = QNet(input_channels=4, n_actions=len(COMPLEX_MOVEMENT)).to(device)
 ckpt = torch.load("best_agent.pth", map_location=device)
 q_net.load_state_dict(ckpt['q_net'])
-q_net.eval()        # turn off training‐mode (NoisyLinear will use mu only)
+q_net.eval()
 
-# 2) FrameStack for preprocessing
 stacker = FrameStack(k=4)
 
-# (We drop replay buffer, target_net, etc.)
-
-# Globals used by Agent.act:
 state   = None
 counter = 0
 action  = None
