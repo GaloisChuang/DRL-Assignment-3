@@ -103,7 +103,7 @@ class QNet(nn.Module):
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # 1) Instantiate and load only the Q-network
-q_net = QNet(in_channels=4, n_actions=len(COMPLEX_MOVEMENT)).to(device)
+q_net = QNet(input_channels=4, n_actions=len(COMPLEX_MOVEMENT)).to(device)
 ckpt = torch.load("best_agent.pth", map_location=device)
 q_net.load_state_dict(ckpt['q_net'])
 q_net.eval()        # turn off training‐mode (NoisyLinear will use mu only)
