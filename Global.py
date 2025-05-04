@@ -45,22 +45,6 @@ class NoisyLinear(nn.Module):
         self.bias_sigma = nn.Parameter(torch.empty(out_features))
         self.register_buffer('bias_epsilon', torch.empty(out_features))
 
-        self.reset_parameters()
-        self.reset_noise()
-
-    def reset_parameters(self):
-        mu_range = 1 / np.sqrt(self.in_features)
-        self.weight_mu.data.uniform_(-mu_range, mu_range)
-        self.weight_sigma.data.fill_(self.std_init / np.sqrt(self.in_features))
-        self.bias_mu.data.uniform_(-mu_range, mu_range)
-        self.bias_sigma.data.fill_(self.std_init / np.sqrt(self.out_features))
-
-    def reset_noise(self):
-        epsilon_in = torch.randn(self.in_features)
-        epsilon_out = torch.randn(self.out_features)
-        self.weight_epsilon.copy_(epsilon_out.ger(epsilon_in))
-        self.bias_epsilon.copy_(epsilon_out)
-
     def forward(self, x):
         if self.training:
             weight = self.weight_mu + self.weight_sigma * self.weight_epsilon
@@ -92,11 +76,6 @@ class QNet(nn.Module):
         adv = self.advantage(x)
         val = self.value(x)
         return val + adv - adv.mean(dim=1, keepdim=True)
-
-    def reset_noise(self):
-        for m in self.modules():
-            if isinstance(m, NoisyLinear):
-                m.reset_noise()
 
 # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 device = torch.device("cpu")
