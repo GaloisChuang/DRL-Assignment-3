@@ -9,7 +9,7 @@ import gym_super_mario_bros
 from gym_super_mario_bros.actions import COMPLEX_MOVEMENT
 from nes_py.wrappers import JoypadSpace
 
-from Global import *
+import Global
 
 # --- Preprocessing and Lazy Frame-Stack for Memory Efficiency ---
 class LazyFrames:
@@ -276,11 +276,13 @@ class Agent(object):
         if Global.counter % 4 != 0 and Global.action is not None:
             return Global.action
         if Global.state is None:
+            stacker = FrameStack(k=4)
             Global.state = stacker.reset(observation)
         else:
-            Global.state = stacker.step(observation)
+            Global.state.step(observation)
         agent = Global.agent
         action = agent.get_action(Global.state, eval_mode=True)
         Global.action = action
+        return action
         
         
