@@ -98,120 +98,22 @@ class QNet(nn.Module):
             if isinstance(m, NoisyLinear):
                 m.reset_noise()
 
-# --- Prioritized Replay Buffer ---
-class PrioritizedReplayBuffer:
-    def __init__(self, capacity, alpha=0.6, n_step=3, gamma=0.99):
-        self.capacity = capacity
-        self.buffer = deque(maxlen=capacity)
-        self.priorities = deque(maxlen=capacity)
-        self.alpha = alpha
-        self.n_step = n_step
-        self.gamma = gamma
-        self.n_step_buffer = deque(maxlen=n_step)
 
-    def add(self, transition):
-        self.n_step_buffer.append(transition)
-        if len(self.n_step_buffer) < self.n_step:
-            return
-        # compute n-step return
-        reward, next_state, done = self._get_n_step_info()
-        state, action, _, _, _ = self.n_step_buffer[0]
-        self.buffer.append((state, action, reward, next_state, done))
-        self.priorities.append(max(self.priorities, default=1.0))
-
-    def _get_n_step_info(self):
-        reward, next_state, done = self.n_step_buffer[-1][2:5]
-        for (s, a, r, ns, d) in reversed(list(self.n_step_buffer)[:-1]):
-            reward = r + self.gamma * reward * (1 - d)
-            next_state, done = (ns, d) if d else (next_state, done)
-        return reward, next_state, done
-
-    def sample(self, batch_size, beta=0.4):
-        prios = np.array(self.priorities, dtype=np.float32)
-        probs = prios ** self.alpha
-        probs /= probs.sum()
-        indices = np.random.choice(len(self.buffer), batch_size, p=probs)
-        samples = [self.buffer[i] for i in indices]
-        total = len(self.buffer)
-        weights = (total * probs[indices]) ** (-beta)
-        weights /= weights.max()
-        states, actions, rewards, next_states, dones = zip(*samples)
-        states = np.stack(states, axis=0)
-        next_states = np.stack(next_states, axis=0)
-        return states, actions, rewards, next_states, dones, indices, torch.tensor(weights, dtype=torch.float32)
-
-    def update_priorities(self, indices, priorities):
-        for idx, p in zip(indices, priorities):
-            self.priorities[idx] = float(p)
-
-    def __len__(self):
-        return len(self.buffer)
-
-# --- Batch Preprocessing ---
-def preprocess_batch(batch):
-    if isinstance(batch, np.ndarray) and batch.dtype == np.uint8:
-        return torch.tensor(batch, dtype=torch.float32).div(255.0)
-    if isinstance(batch, torch.Tensor):
-        return batch.float().div(255.0) if batch.dtype == torch.uint8 else batch
-    raise ValueError(f"Unexpected batch type {type(batch)}")
-
-# --- DQN Agent ---
-class DQNAgent:
-    def __init__(self, state_shape, n_actions, gamma=0.99, lr=2.5e-4, batch_size=64,
-                 buffer_size=10000, tau=0.01, device='cuda'):
-        self.device = torch.device(device)
-        self.q_net = QNet(state_shape[0], n_actions).to(self.device)
-        self.target_net = QNet(state_shape[0], n_actions).to(self.device)
-        self.target_net.load_state_dict(self.q_net.state_dict())
-        self.optimizer = torch.optim.RMSprop(
-            self.q_net.parameters(), lr=lr, alpha=0.95, eps=1e-2)
-        self.replay_buffer = PrioritizedReplayBuffer(buffer_size, n_step=5, gamma=gamma)
-        self.gamma = gamma
-        self.batch_size = batch_size
-        self.tau = tau
-
-    def get_action(self, state, eval_mode=False):
-        # state: np.ndarray (4,84,84), uint8
-        s = preprocess_batch(state).unsqueeze(0).to(self.device)
-        self.q_net.eval() if eval_mode else self.q_net.train()
-        with torch.no_grad():
-            return self.q_net(s).argmax(1).item()
-
-    def update(self):
-        for t, s in zip(self.target_net.parameters(), self.q_net.parameters()):
-            t.data.copy_(self.tau * s.data + (1-self.tau) * t.data)
-
-    def train(self, beta=0.4):
-        if len(self.replay_buffer) < self.batch_size:
-            return
-        states, actions, rewards, next_states, dones, idxs, weights = \
-            self.replay_buffer.sample(self.batch_size, beta)
-        s = preprocess_batch(states).to(self.device)
-        ns = preprocess_batch(next_states).to(self.device)
-        a = torch.tensor(actions, dtype=torch.int64).to(self.device)
-        r = torch.tensor(rewards, dtype=torch.float32).to(self.device)
-        d = torch.tensor(dones, dtype=torch.float32).to(self.device)
-        w = weights.to(self.device)
-        # Q values
-        q_vals = self.q_net(s).gather(1, a.unsqueeze(1)).squeeze(1)
-        # next
-        with torch.no_grad():
-            next_q = self.q_net(ns).argmax(dim=1, keepdim=True)
-            target_q = self.target_net(ns).gather(1, next_q).squeeze(1)
-            q_target = r + (1-d)*(self.gamma**self.replay_buffer.n_step)*target_q
-        td = q_vals - q_target
-        loss = (td.pow(2) * w).mean()
-        self.optimizer.zero_grad(); loss.backward()
-        torch.nn.utils.clip_grad_norm_(self.q_net.parameters(), 10.0)
-        self.optimizer.step()
-        self.replay_buffer.update_priorities(idxs, td.abs().detach().cpu().numpy())
-
+# Device setup
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-agent = DQNAgent(state_shape=(4,84,84), n_actions=len(COMPLEX_MOVEMENT), device=device)
-ckpt = torch.load("best_agent.pth", map_location=device)
-agent.q_net.load_state_dict(ckpt['q_net'])
-agent.target_net.load_state_dict(ckpt['target_net'])
 
+# 1) Instantiate and load only the Q-network
+q_net = QNet(in_channels=4, n_actions=len(COMPLEX_MOVEMENT)).to(device)
+ckpt = torch.load("best_agent.pth", map_location=device)
+q_net.load_state_dict(ckpt['q_net'])
+q_net.eval()        # turn off training‐mode (NoisyLinear will use mu only)
+
+# 2) FrameStack for preprocessing
+stacker = FrameStack(k=4)
+
+# (We drop replay buffer, target_net, etc.)
+
+# Globals used by Agent.act:
 state   = None
 counter = 0
 action  = None

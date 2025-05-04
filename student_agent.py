@@ -219,13 +219,21 @@ class Agent:
         if Global.counter % 4 != 0 and Global.action is not None:
             Global.counter += 1
             return Global.action
-        if not hasattr(Global, 'stacker'):
-            Global.stacker = FrameStack(k=4)
+
+        # 2) build 4-frame state
+        if Global.state is None:
             Global.state = Global.stacker.reset(obs)
         else:
             Global.state = Global.stacker.step(obs)
-        # optional: Global.agent.q_net.reset_noise()
-        a = Global.agent.get_action(Global.state, eval_mode=True)
-        Global.action = a
+
+        # 3) preprocess and forward through Q-net
+        state_tensor = torch.tensor(Global.state, dtype=torch.float32).div(255.0)
+        state_tensor = state_tensor.unsqueeze(0).to(Global.device)  # [1,4,84,84]
+        with torch.no_grad():
+            q_vals = Global.q_net(state_tensor)                    # [1, n_actions]
+        best_a = q_vals.argmax(dim=1).item()
+
+        # 4) store & return
+        Global.action = best_a
         Global.counter += 1
-        return a
+        return best_a
