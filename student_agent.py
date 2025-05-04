@@ -216,8 +216,8 @@ class Agent:
         self.action_space = gym.spaces.Discrete(len(COMPLEX_MOVEMENT))
 
     def act(self, obs):
-        Global.counter += 1
         if Global.counter % 4 != 0 and Global.action is not None:
+            Global.counter += 1
             return Global.action
         if not hasattr(Global, 'stacker'):
             Global.stacker = FrameStack(k=4)
@@ -227,4 +227,5 @@ class Agent:
         # optional: Global.agent.q_net.reset_noise()
         a = Global.agent.get_action(Global.state, eval_mode=True)
         Global.action = a
+        Global.counter += 1
         return a
