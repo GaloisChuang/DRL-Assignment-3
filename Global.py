@@ -4,7 +4,6 @@ from collections import deque
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import gym_super_mario_bros
 from gym_super_mario_bros.actions import COMPLEX_MOVEMENT
 from nes_py.wrappers import JoypadSpace
 
@@ -270,7 +269,7 @@ agent = DQNAgent(
     device=device, q_net=None, target_net=None
 )
 
-ckpt = torch.load("checkpoint(uni)_600.pth", map_location=device)
+ckpt = torch.load("best_agent.pth", map_location=device)
 agent.q_net.load_state_dict(ckpt['q_net'])
 agent.target_net.load_state_dict(ckpt['target_net'])
 
