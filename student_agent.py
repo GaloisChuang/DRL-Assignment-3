@@ -1,8 +1,3 @@
-import gym
-import numpy as np
-import torch
-from Global import *
-
 import cv2
 import numpy as np
 from collections import deque
@@ -12,6 +7,8 @@ import torch.nn.functional as F
 import gym_super_mario_bros
 from gym_super_mario_bros.actions import COMPLEX_MOVEMENT
 from nes_py.wrappers import JoypadSpace
+
+from Global import *
 
 # --- Preprocessing and Lazy Frame-Stack for Memory Efficiency ---
 class LazyFrames:
