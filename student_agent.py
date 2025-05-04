@@ -180,8 +180,7 @@ def preprocess_batch(batch):
     """
     if isinstance(batch, LazyFrames):
         batch = np.array(batch, dtype=np.uint8)
-
-    if isinstance(batch, np.ndarray) and batch.dtype == np.uint8:
+    elif isinstance(batch, np.ndarray) and batch.dtype == np.uint8:
         # print("Preprocessing batch to float32 and normalizing.")
         return torch.tensor(batch, dtype=torch.float32).div(255.0)
     elif isinstance(batch, torch.Tensor) and batch.dtype == torch.uint8:
