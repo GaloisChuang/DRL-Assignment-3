@@ -178,6 +178,9 @@ def preprocess_batch(batch):
     Convert a batch of observations (usually from replay buffer) to float32 and normalize if needed.
     Ensures normalization only occurs once.
     """
+    if isinstance(batch, LazyFrames):
+        batch = np.array(batch, dtype=np.uint8)
+
     if isinstance(batch, np.ndarray) and batch.dtype == np.uint8:
         # print("Preprocessing batch to float32 and normalizing.")
         return torch.tensor(batch, dtype=torch.float32).div(255.0)
