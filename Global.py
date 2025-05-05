@@ -62,12 +62,12 @@ class NoisyLinear(nn.Module):
         self.bias_epsilon.copy_(epsilon_out)
 
     def forward(self, x):
-        if self.training:
-            weight = self.weight_mu + self.weight_sigma * self.weight_epsilon
-            bias = self.bias_mu + self.bias_sigma * self.bias_epsilon
-        else:
-            weight = self.weight_mu
-            bias = self.bias_mu
+        # if self.training:
+        weight = self.weight_mu + self.weight_sigma * self.weight_epsilon
+        bias = self.bias_mu + self.bias_sigma * self.bias_epsilon
+        # else:
+        #     weight = self.weight_mu
+        #     bias = self.bias_mu
         return F.linear(x, weight, bias)
 
 # --- Q-Network ---
@@ -102,11 +102,10 @@ class QNet(nn.Module):
 device = torch.device("cpu")
 
 q_net = QNet(input_channels=4, n_actions=len(COMPLEX_MOVEMENT)).to(device)
-ckpt = torch.load("best_agent.pth", map_location=device)
+ckpt = torch.load("best_agent_9238.pth", map_location=device)
 q_net.load_state_dict(ckpt['q_net'])
 q_net.eval()
 
 stacker = FrameStack(k=4)
-
 state   = None
 counter = 0

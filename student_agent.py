@@ -66,12 +66,12 @@ class NoisyLinear(nn.Module):
         self.bias_epsilon.copy_(epsilon_out)
 
     def forward(self, x):
-        if self.training:
-            weight = self.weight_mu + self.weight_sigma * self.weight_epsilon
-            bias = self.bias_mu + self.bias_sigma * self.bias_epsilon
-        else:
-            weight = self.weight_mu
-            bias = self.bias_mu
+        # if self.training:
+        weight = self.weight_mu + self.weight_sigma * self.weight_epsilon
+        bias = self.bias_mu + self.bias_sigma * self.bias_epsilon
+        # else:
+        #     weight = self.weight_mu
+        #     bias = self.bias_mu
         return F.linear(x, weight, bias)
 
 # --- Q-Network ---
@@ -229,6 +229,7 @@ class Agent:
         # 3) preprocess and forward through Q-net
         state_tensor = torch.tensor(Global.state, dtype=torch.float32).div(255.0)
         state_tensor = state_tensor.unsqueeze(0).to(Global.device)  # [1,4,84,84]
+        Global.q_net.eval()     
         with torch.no_grad():
             q_vals = Global.q_net(state_tensor)                    # [1, n_actions]
         best_a = q_vals.argmax(dim=1).item()
