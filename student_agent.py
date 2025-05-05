@@ -215,33 +215,63 @@ class Agent:
     def __init__(self):
         self.action_space = gym.spaces.Discrete(len(COMPLEX_MOVEMENT))
 
-    def act(self, obs):
-        if Global.counter % 4 != 0 and Global.action is not None:
-            Global.counter += 1
-            return Global.action
+    # def act(self, obs):
+    #     if Global.counter % 4 != 0 and Global.action is not None:
+    #         Global.counter += 1
+    #         return Global.action
 
-        # 2) build 4-frame state
-        if Global.state is None or np.array_equal(obs, Global.first):
-            Global.state = Global.stacker.reset(obs)
-            Global.counter = 0
-            print("New episode started")
-            print(Global.counter)
-        else:
-            Global.state = Global.stacker.step(obs)
+    #     # 2) build 4-frame state
+    #     if Global.state is None or np.array_equal(obs, Global.first):
+    #         Global.state = Global.stacker.reset(obs)
+    #         # Global.counter = 0
+    #         print("New episode started")
+    #         print(Global.counter)
+    #     else:
+    #         Global.state = Global.stacker.step(obs)
 
-        # 3) preprocess and forward through Q-net
-        state_tensor = torch.tensor(Global.state, dtype=torch.float32).div(255.0)
-        state_tensor = state_tensor.unsqueeze(0).to(Global.device)  # [1,4,84,84]
-        Global.q_net.eval()     
-        with torch.no_grad():
-            q_vals = Global.q_net(state_tensor)                    # [1, n_actions]
-        best_a = q_vals.argmax(dim=1).item()
+    #     # 3) preprocess and forward through Q-net
+    #     state_tensor = torch.tensor(Global.state, dtype=torch.float32).div(255.0)
+    #     state_tensor = state_tensor.unsqueeze(0).to(Global.device)  # [1,4,84,84]
+    #     Global.q_net.eval()     
+    #     with torch.no_grad():
+    #         q_vals = Global.q_net(state_tensor)                    # [1, n_actions]
+    #     best_a = q_vals.argmax(dim=1).item()
 
-        # 4) store & return
-        Global.action = best_a
-        Global.counter += 1
-        return best_a
+    #     # 4) store & return
+    #     Global.action = best_a
+    #     Global.counter += 1
+    #     return best_a
     
 
-    # def act_eval(self, obs):
-    #     if np.array_equal(obs, Global.first) and 
+    def act(self, obs):
+        if np.array_equal(obs, Global.first):
+            if Global.state is None or not np.array_equal(preprocess_frame(obs), Global.state[-1]):
+                print("New episode started")
+                Global.state = Global.stacker.reset(obs)
+                Global.counter = 0
+                state_tensor = torch.tensor(Global.state, dtype=torch.float32).div(255.0)
+                state_tensor = state_tensor.unsqueeze(0).to(Global.device)  # [1,4,84,84]
+                Global.q_net.eval()     
+                with torch.no_grad():
+                    q_vals = Global.q_net(state_tensor)                    # [1, n_actions]
+                action = q_vals.argmax(dim=1).item()
+                Global.action = action
+                Global.counter += 1
+                # print("Case 1")
+                return action
+        if Global.counter % 4 != 0 and Global.action is not None:
+            Global.counter += 1
+            # print("Case 2")
+            return Global.action
+        else:
+            Global.state = Global.stacker.step(obs)
+            state_tensor = torch.tensor(Global.state, dtype=torch.float32).div(255.0)
+            state_tensor = state_tensor.unsqueeze(0).to(Global.device)
+            Global.q_net.eval()
+            with torch.no_grad():
+                q_vals = Global.q_net(state_tensor)
+            action = q_vals.argmax(dim=1).item()
+            Global.action = action
+            Global.counter += 1
+            # print("Case 3")
+            return action
