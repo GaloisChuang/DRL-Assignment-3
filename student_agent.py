@@ -80,6 +80,22 @@ class QNet(nn.Module):
         adv = self.advantage(x)
         val = self.value(x)
         return val + adv - adv.mean(dim=1, keepdim=True)
+    
+def preprocess_batch(batch):
+    """
+    Convert a batch of observations (usually from replay buffer) to float32 and normalize if needed.
+    Ensures normalization only occurs once.
+    """
+    if isinstance(batch, np.ndarray) and batch.dtype == np.uint8:
+        # print("Preprocessing batch to float32 and normalizing.")
+        return torch.tensor(batch, dtype=torch.float32).div(255.0)
+    elif isinstance(batch, torch.Tensor) and batch.dtype == torch.uint8:
+        # print("Preprocessing batch to float32 and normalizing.")
+        return batch.float().div(255.0)
+    elif isinstance(batch, torch.Tensor):
+        return batch  # already float
+    else:
+        raise ValueError("Unexpected input type or dtype in preprocess_batch.")
 
 # --- Agent Wrapper ---
 class Agent:
@@ -98,14 +114,10 @@ class Agent:
         else:
             Global.state = Global.stacker.step(obs)
 
-        # 3) preprocess and forward through Q-net
-        state_tensor = torch.tensor(Global.state, dtype=torch.float32).div(255.0)
-        state_tensor = state_tensor.unsqueeze(0).to(Global.device)  # [1,4,84,84]
-        with torch.no_grad():
-            q_vals = Global.q_net(state_tensor)                    # [1, n_actions]
-        best_a = q_vals.argmax(dim=1).item()
+        state = Global.state.copy()
+        assert state.shape() == (4, 84, 84), "State shape mismatch: {}".format(state.shape())
 
-        # 4) store & return
-        Global.action = best_a
-        Global.counter += 1
-        return best_a
+        # 3) preprocess and forward through Q-net
+        state_tensor = preprocess_batch(state).unsqueeze(0).to(self.device)
+        with torch.no_grad():
+            return self.q_net(state_tensor).argmax(1).item()
