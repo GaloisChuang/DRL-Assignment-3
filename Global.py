@@ -109,3 +109,4 @@ q_net.eval()
 stacker = FrameStack(k=4)
 state   = None
 counter = 0
+first = np.load("First_view.npy")
