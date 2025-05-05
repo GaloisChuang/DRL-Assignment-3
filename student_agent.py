@@ -223,6 +223,7 @@ class Agent:
         # 2) build 4-frame state
         if Global.state is None:
             Global.state = Global.stacker.reset(obs)
+            print("New episode started")
         else:
             Global.state = Global.stacker.step(obs)
 
