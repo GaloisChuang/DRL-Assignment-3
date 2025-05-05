@@ -243,5 +243,5 @@ class Agent:
         return best_a
     
 
-    def act_eval(self, obs):
-        if np.array_equal(obs, Global.first) and 
+    # def act_eval(self, obs):
+    #     if np.array_equal(obs, Global.first) and 
