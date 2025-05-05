@@ -102,7 +102,7 @@ class QNet(nn.Module):
 device = torch.device("cpu")
 
 q_net = QNet(input_channels=4, n_actions=len(COMPLEX_MOVEMENT)).to(device)
-ckpt = torch.load("best_agent_9238.pth", map_location=device)
+ckpt = torch.load("best_agent_6520.pth", map_location=device)
 q_net.load_state_dict(ckpt['q_net'])
 q_net.eval()
 

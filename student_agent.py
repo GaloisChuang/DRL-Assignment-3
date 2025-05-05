@@ -246,7 +246,6 @@ class Agent:
     def act(self, obs):
         if np.array_equal(obs, Global.first):
             if Global.state is None or not np.array_equal(preprocess_frame(obs), Global.state[-1]):
-                print("New episode started")
                 Global.state = Global.stacker.reset(obs)
                 Global.counter = 0
                 state_tensor = torch.tensor(Global.state, dtype=torch.float32).div(255.0)
@@ -259,6 +258,19 @@ class Agent:
                 Global.counter += 1
                 # print("Case 1")
                 return action
+        if Global.state is None:
+            Global.state = Global.stacker.reset(obs)
+            Global.counter = 0
+            state_tensor = torch.tensor(Global.state, dtype=torch.float32).div(255.0)
+            state_tensor = state_tensor.unsqueeze(0).to(Global.device)  # [1,4,84,84]
+            Global.q_net.eval()     
+            with torch.no_grad():
+                q_vals = Global.q_net(state_tensor)                    # [1, n_actions]
+            action = q_vals.argmax(dim=1).item()
+            Global.action = action
+            Global.counter += 1
+            # print("Case 1")
+            return action
         if Global.counter % 4 != 0 and Global.action is not None:
             Global.counter += 1
             # print("Case 2")
