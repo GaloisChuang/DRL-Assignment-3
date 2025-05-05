@@ -221,7 +221,7 @@ class Agent:
             return Global.action
 
         # 2) build 4-frame state
-        if Global.state is None or np.equal(obs, Global.first):
+        if Global.state is None or np.array_equal(obs, Global.first):
             Global.state = Global.stacker.reset(obs)
             Global.counter = 0
             print("New episode started")
