@@ -94,7 +94,7 @@ class Agent:
         # 2) build 4-frame state
         if Global.state is None:
             Global.state = Global.stacker.reset(obs)
-            print("State initialized")
+            
         else:
             Global.state = Global.stacker.step(obs)
 
