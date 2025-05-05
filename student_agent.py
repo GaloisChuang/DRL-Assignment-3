@@ -102,30 +102,30 @@ class Agent:
     def __init__(self):
         self.action_space = gym.spaces.Discrete(len(COMPLEX_MOVEMENT))
 
-        def act(self, obs):
-            # 1) frame-skip reuse
-            if Global.counter % 4 != 0 and Global.action is not None:
-                Global.counter += 1
-                return Global.action
+    def act(self, obs):
+        # 1) frame-skip reuse
+        if Global.counter % 4 != 0 and Global.action is not None:
+            Global.counter += 1
+            return Global.action
 
-            # 2) build 4-frame state
-            if Global.state is None:
-                Global.state = Global.stacker.reset(obs)
-                print("New Episode Started")
-            else:
-                Global.state = Global.stacker.step(obs)
+        # 2) build 4-frame state
+        if Global.state is None:
+            Global.state = Global.stacker.reset(obs)
+            print("New Episode Started")
+        else:
+            Global.state = Global.stacker.step(obs)
 
-            # 3) forward through Q-net
-            state = Global.state.copy()   # shape=(4,84,84), dtype=uint8
-            state_tensor = preprocess_batch(state).unsqueeze(0).to(Global.device)
+        # 3) forward through Q-net
+        state = Global.state.copy()   # shape=(4,84,84), dtype=uint8
+        state_tensor = preprocess_batch(state).unsqueeze(0).to(Global.device)
 
-            # ensure your net is in eval mode at test time:
-            Global.q_net.eval()
-            with torch.no_grad():
-                action = Global.q_net(state_tensor).argmax(1).item()
+        # ensure your net is in eval mode at test time:
+        Global.q_net.eval()
+        with torch.no_grad():
+            action = Global.q_net(state_tensor).argmax(1).item()
 
-            # 4) reset frame-skip counters
-            Global.action = action
-            Global.counter = 1
+        # 4) reset frame-skip counters
+        Global.action = action
+        Global.counter = 1
 
-            return action
+        return action
