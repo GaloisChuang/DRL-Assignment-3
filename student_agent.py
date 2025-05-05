@@ -115,9 +115,11 @@ class Agent:
             Global.state = Global.stacker.step(obs)
 
         state = Global.state.copy()
+        
         assert state.shape == (4, 84, 84), f"State shape mismatch: {state.shape}"
         assert state.dtype == np.uint8, f"State dtype mismatch: {state.dtype}"
+
         # 3) preprocess and forward through Q-net
-        state_tensor = preprocess_batch(state).unsqueeze(0).to(self.device)
+        state_tensor = preprocess_batch(state).unsqueeze(0).to(Global.device)
         with torch.no_grad():
-            return self.q_net(state_tensor).argmax(1).item()
+            return Global.q_net(state_tensor).argmax(1).item()
