@@ -106,6 +106,7 @@ ckpt = torch.load("best_agent_9238.pth", map_location=device)
 q_net.load_state_dict(ckpt['q_net'])
 q_net.eval()
 
+
 stacker = FrameStack(k=4)
 state   = None
 counter = 0
