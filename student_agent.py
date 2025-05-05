@@ -225,6 +225,7 @@ class Agent:
             Global.state = Global.stacker.reset(obs)
             Global.counter = 0
             print("New episode started")
+            print(Global.counter)
         else:
             Global.state = Global.stacker.step(obs)
 
@@ -240,3 +241,7 @@ class Agent:
         Global.action = best_a
         Global.counter += 1
         return best_a
+    
+
+    def act_eval(self, obs):
+        if np.array_equal(obs, Global.first) and 
